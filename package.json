@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -73,6 +73,7 @@
     "input-otp": "^1.4.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
+    "magic-string": "^0.30.21",
     "mini-svg-data-uri": "^1.4.4",
     "motion": "^12.23.26",
     "next": "15.5.7",

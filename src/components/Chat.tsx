@@ -137,8 +137,19 @@ export function Chat({ session, privateKey, initialContact, isPartnerOnline, onB
       try {
         packet = JSON.parse(msg.encrypted_content);
       } catch (e) {
-        // Not a JSON, probably plain text or legacy
-        return msg.encrypted_content;
+        // Not a JSON, check if it's a legacy format or if keys are in separate columns
+        if (msg.iv && (msg.sender_key || msg.receiver_key)) {
+          packet = {
+            iv: msg.iv,
+            content: msg.encrypted_content,
+            keys: {
+              [msg.sender_id]: msg.sender_key,
+              [msg.receiver_id]: msg.receiver_key
+            }
+          };
+        } else {
+          return msg.encrypted_content;
+        }
       }
 
       if (!packet.iv || !packet.content || !packet.keys) return msg.encrypted_content;
@@ -146,6 +157,12 @@ export function Chat({ session, privateKey, initialContact, isPartnerOnline, onB
       const encryptedAESKey = packet.keys[session.user.id];
       if (!encryptedAESKey) {
         console.warn("Encryption Error: Key Missing for user", session.user.id);
+        // Fallback to separate columns if JSON packet missing key
+        const fallbackKey = msg.sender_id === session.user.id ? msg.sender_key : msg.receiver_key;
+        if (fallbackKey) {
+          const aesKey = await decryptAESKeyWithUserPrivateKey(fallbackKey, privateKey);
+          return await decryptWithAES(packet.content, packet.iv, aesKey);
+        }
         return "[Encrypted Message]";
       }
       
@@ -264,6 +281,9 @@ export function Chat({ session, privateKey, initialContact, isPartnerOnline, onB
           sender_id: session.user.id, 
           receiver_id: contactProfile.id, 
           encrypted_content: packet, 
+          iv: encrypted.iv,
+          sender_key: encryptedKeyForMe,
+          receiver_key: encryptedKeyForPartner,
           media_type: mediaType, 
           media_url: mediaUrl, 
           is_viewed: false, 
